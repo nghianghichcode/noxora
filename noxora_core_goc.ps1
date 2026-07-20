@@ -1,9 +1,9 @@
 ﻿#requires -Version 5.1
 # ==============================================================================
-# NOXORA OPTIMIZER - SAFE SYSTEM ADMINISTRATION EDITION
-# Purpose: audit, diagnostics, reversible tuning and local reporting.
-# This script does NOT download payloads, create persistence, hide processes,
-# disable security products, exfiltrate data, mine crypto, or perform botnet tasks.
+# NOXORA OPTIMIZER - PHIÊN BẢN QUẢN TRỊ HỆ THỐNG AN TOÀN
+# Mục đích: kiểm tra, chẩn đoán, tối ưu có thể hoàn tác và xuất báo cáo cục bộ.
+# Tập lệnh này KHÔNG tải mã thực thi từ xa, tạo cơ chế bám trụ, ẩn tiến trình,
+# tắt công cụ bảo mật, gửi dữ liệu ra ngoài, đào tiền mã hóa hoặc thực hiện botnet.
 # ==============================================================================
 
 Set-StrictMode -Version 2.0
@@ -17,7 +17,7 @@ try {
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms
 
 # ------------------------------------------------------------------------------
-# Application paths and global state
+# Đường dẫn ứng dụng và trạng thái toàn cục
 # ------------------------------------------------------------------------------
 $script:AppRoot        = Join-Path $env:ProgramData "NoxoraOptimizer"
 $script:LogRoot        = Join-Path $script:AppRoot "Logs"
@@ -44,7 +44,7 @@ foreach ($folder in @($script:AppRoot, $script:LogRoot, $script:StateRoot)) {
 }
 
 # ------------------------------------------------------------------------------
-# Safety and privilege checks
+# Kiểm tra an toàn và quyền quản trị
 # ------------------------------------------------------------------------------
 function Test-NoxoraAdministrator {
     $identity  = [Security.Principal.WindowsIdentity]::GetCurrent()
@@ -60,7 +60,7 @@ if (-not (Test-NoxoraAdministrator)) {
                 -Verb RunAs
         } catch {
             [System.Windows.Forms.MessageBox]::Show(
-                "Noxora requires Administrator rights.",
+                "Noxora cần quyền Quản trị viên để hoạt động.",
                 "Noxora Optimizer",
                 "OK",
                 "Warning"
@@ -68,7 +68,7 @@ if (-not (Test-NoxoraAdministrator)) {
         }
     } else {
         [System.Windows.Forms.MessageBox]::Show(
-            "Open PowerShell as Administrator, then run Noxora again.",
+            "Hãy mở PowerShell bằng quyền Quản trị viên, sau đó chạy lại Noxora.",
             "Noxora Optimizer",
             "OK",
             "Warning"
@@ -85,7 +85,7 @@ $script:Mutex = New-Object System.Threading.Mutex(
 )
 if (-not $createdNew) {
     [System.Windows.Forms.MessageBox]::Show(
-        "Noxora is already running.",
+        "Noxora đang được chạy trong một cửa sổ khác.",
         "Noxora Optimizer",
         "OK",
         "Information"
@@ -94,7 +94,7 @@ if (-not $createdNew) {
 }
 
 # ------------------------------------------------------------------------------
-# Logging and UI helpers
+# Hàm hỗ trợ nhật ký và giao diện
 # ------------------------------------------------------------------------------
 function Write-NoxoraLog {
     param(
@@ -147,6 +147,35 @@ function Set-NoxoraSummary {
     }
 }
 
+function ConvertTo-NoxoraYesNo {
+    param($Value)
+
+    if ($null -eq $Value) {
+        return "Không xác định"
+    }
+
+    if ([bool]$Value) {
+        return "Có"
+    }
+
+    return "Không"
+}
+
+function ConvertTo-NoxoraSignatureStatus {
+    param([string]$Status)
+
+    switch ($Status) {
+        "Valid"         { return "Hợp lệ" }
+        "NotSigned"     { return "Chưa ký số" }
+        "HashMismatch"  { return "Sai mã băm" }
+        "NotTrusted"    { return "Không tin cậy" }
+        "UnknownError"  { return "Lỗi không xác định" }
+        "CheckFailed"   { return "Kiểm tra thất bại" }
+        "Unknown"       { return "Không xác định" }
+        default           { return $Status }
+    }
+}
+
 function Invoke-NoxoraUiPump {
     if ($null -ne $script:windowMain) {
         $script:windowMain.Dispatcher.Invoke(
@@ -178,10 +207,10 @@ function Invoke-NoxoraAction {
             & $OnSuccess $result
         }
 
-        Write-NoxoraLog "$Title - completed." "SUCCESS"
+        Write-NoxoraLog "$Title - hoàn tất." "SUCCESS"
     } catch {
         $message = $_.Exception.Message
-        Write-NoxoraLog "$Title - failed: $message" "ERROR"
+        Write-NoxoraLog "$Title - thất bại: $message" "ERROR"
         [System.Windows.Forms.MessageBox]::Show(
             $message,
             "Noxora Optimizer",
@@ -194,7 +223,7 @@ function Invoke-NoxoraAction {
 }
 
 # ------------------------------------------------------------------------------
-# Local credential protection using Windows DPAPI
+# Bảo vệ thông tin đăng nhập cục bộ bằng Windows DPAPI
 # ------------------------------------------------------------------------------
 function ConvertFrom-NoxoraSecureString {
     param([Security.SecureString]$SecureString)
@@ -263,19 +292,19 @@ function Test-NoxoraCredential {
         }
         return ($difference -eq 0)
     } catch {
-        Write-NoxoraLog "Credential validation error: $($_.Exception.Message)" "ERROR"
+        Write-NoxoraLog "Lỗi xác thực thông tin đăng nhập: $($_.Exception.Message)" "ERROR"
         return $false
     }
 }
 
 # ------------------------------------------------------------------------------
-# First-run administrator setup
+# Thiết lập quản trị viên trong lần chạy đầu
 # ------------------------------------------------------------------------------
 if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
     $xamlSetup = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        Title="Noxora First Run Setup"
-        Height="430" Width="470"
+        Title="Thiết lập Noxora lần đầu"
+        Height="430" Width="520"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -299,21 +328,21 @@ if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
             </Grid.RowDefinitions>
 
             <TextBlock Grid.Row="0"
-                       Text="NOXORA FIRST-RUN ADMIN SETUP"
+                       Text="THIẾT LẬP QUẢN TRỊ VIÊN LẦN ĐẦU"
                        Foreground="#89b4fa"
                        FontSize="17"
                        FontWeight="Black"
                        HorizontalAlignment="Center"
                        VerticalAlignment="Center"/>
 
-            <TextBlock Grid.Row="1" Text="ADMIN USERNAME"
+            <TextBlock Grid.Row="1" Text="TÊN TÀI KHOẢN QUẢN TRỊ"
                        Foreground="#a6adc8" FontWeight="Bold" FontSize="11"/>
             <TextBox Name="SetupUser" Grid.Row="2"
                      Background="#11111b" Foreground="#cdd6f4"
                      BorderBrush="#45475a" Padding="12,9"
                      FontSize="14"/>
 
-            <TextBlock Grid.Row="3" Text="PASSWORD (MINIMUM 10 CHARACTERS)"
+            <TextBlock Grid.Row="3" Text="MẬT KHẨU (TỐI THIỂU 10 KÝ TỰ)"
                        Foreground="#a6adc8" FontWeight="Bold" FontSize="11"
                        Margin="0,12,0,0"/>
             <PasswordBox Name="SetupPass" Grid.Row="4"
@@ -321,7 +350,7 @@ if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
                          BorderBrush="#45475a" Padding="12,9"
                          FontSize="14"/>
 
-            <TextBlock Grid.Row="5" Text="CONFIRM PASSWORD"
+            <TextBlock Grid.Row="5" Text="XÁC NHẬN MẬT KHẨU"
                        Foreground="#a6adc8" FontWeight="Bold" FontSize="11"
                        Margin="0,12,0,0"/>
             <PasswordBox Name="SetupConfirm" Grid.Row="6"
@@ -330,7 +359,7 @@ if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
                          FontSize="14"/>
 
             <Button Name="SetupCreate" Grid.Row="7"
-                    Content="CREATE LOCAL ADMIN PROFILE"
+                    Content="TẠO TÀI KHOẢN QUẢN TRỊ"
                     Background="#89b4fa"
                     Foreground="#11111b"
                     BorderThickness="0"
@@ -358,8 +387,8 @@ if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
 
         if ([string]::IsNullOrWhiteSpace($user)) {
             [System.Windows.Forms.MessageBox]::Show(
-                "Username cannot be empty.",
-                "Noxora Setup",
+                "Tên tài khoản không được để trống.",
+                "Thiết lập Noxora",
                 "OK",
                 "Warning"
             ) | Out-Null
@@ -368,8 +397,8 @@ if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
 
         if ($pass.Length -lt 10) {
             [System.Windows.Forms.MessageBox]::Show(
-                "Password must contain at least 10 characters.",
-                "Noxora Setup",
+                "Mật khẩu phải có ít nhất 10 ký tự.",
+                "Thiết lập Noxora",
                 "OK",
                 "Warning"
             ) | Out-Null
@@ -378,8 +407,8 @@ if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
 
         if ($pass -cne $confirm) {
             [System.Windows.Forms.MessageBox]::Show(
-                "Password confirmation does not match.",
-                "Noxora Setup",
+                "Mật khẩu xác nhận không khớp.",
+                "Thiết lập Noxora",
                 "OK",
                 "Warning"
             ) | Out-Null
@@ -399,12 +428,12 @@ if (-not (Test-Path -LiteralPath $script:CredentialFile)) {
 }
 
 # ------------------------------------------------------------------------------
-# Login screen
+# Màn hình đăng nhập
 # ------------------------------------------------------------------------------
 $xamlLogin = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        Title="Noxora Secure Access"
-        Height="360" Width="450"
+        Title="Truy cập bảo mật Noxora"
+        Height="360" Width="500"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -433,7 +462,7 @@ $xamlLogin = @"
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0">
-                <TextBlock Text="NOXORA SECURE GATEWAY"
+                <TextBlock Text="CỔNG TRUY CẬP BẢO MẬT NOXORA"
                            Foreground="#cba6f7"
                            FontSize="17"
                            FontWeight="Black"
@@ -452,7 +481,7 @@ $xamlLogin = @"
             </Grid>
 
             <TextBlock Grid.Row="1"
-                       Text="LOCAL ADMIN ID"
+                       Text="TÀI KHOẢN QUẢN TRỊ"
                        Foreground="#a6adc8"
                        FontSize="11"
                        FontWeight="Bold"/>
@@ -465,7 +494,7 @@ $xamlLogin = @"
                      FontSize="14"/>
 
             <TextBlock Grid.Row="3"
-                       Text="DPAPI-PROTECTED PASSWORD"
+                       Text="MẬT KHẨU ĐƯỢC BẢO VỆ BỞI DPAPI"
                        Foreground="#a6adc8"
                        FontSize="11"
                        FontWeight="Bold"
@@ -480,7 +509,7 @@ $xamlLogin = @"
 
             <Button Name="BtnLogin"
                     Grid.Row="5"
-                    Content="INITIALIZE SECURE SESSION"
+                    Content="KHỞI TẠO PHIÊN BẢO MẬT"
                     Margin="0,16,0,0"
                     Background="#cba6f7"
                     Foreground="#11111b"
@@ -508,17 +537,17 @@ $loginAction = {
 
     if (Test-NoxoraCredential -UserName $txtUser.Text -PlainPassword $txtPass.Password) {
         $script:IsAuthenticated = $true
-        Write-NoxoraLog "Local administrator authenticated." "SUCCESS"
+        Write-NoxoraLog "Đã xác thực quản trị viên cục bộ." "SUCCESS"
         $windowLogin.Close()
         return
     }
 
     $remaining = 5 - $script:LoginAttempts
     if ($remaining -le 0) {
-        Write-NoxoraLog "Login blocked after five failed attempts." "WARN"
+        Write-NoxoraLog "Đã khóa đăng nhập sau 5 lần nhập sai." "WARN"
         [System.Windows.Forms.MessageBox]::Show(
-            "Too many failed attempts. Noxora will close.",
-            "Noxora Security",
+            "Bạn đã nhập sai quá nhiều lần. Noxora sẽ đóng.",
+            "Bảo mật Noxora",
             "OK",
             "Error"
         ) | Out-Null
@@ -527,8 +556,8 @@ $loginAction = {
     }
 
     [System.Windows.Forms.MessageBox]::Show(
-        "Unauthorized login. Remaining attempts: $remaining",
-        "Noxora Security",
+        "Thông tin đăng nhập không hợp lệ. Số lần thử còn lại: $remaining",
+        "Bảo mật Noxora",
         "OK",
         "Error"
     ) | Out-Null
@@ -549,7 +578,7 @@ if (-not $script:IsAuthenticated) {
 }
 
 # ------------------------------------------------------------------------------
-# Core inventory and audit functions
+# Các hàm kiểm kê và kiểm tra hệ thống
 # ------------------------------------------------------------------------------
 function Get-NoxoraSystemInventory {
     $os       = Get-CimInstance Win32_OperatingSystem
@@ -882,7 +911,7 @@ function Get-NoxoraSecurityAudit {
 }
 
 # ------------------------------------------------------------------------------
-# Reversible system-state backup
+# Sao lưu trạng thái hệ thống để hoàn tác
 # ------------------------------------------------------------------------------
 function Get-NoxoraActivePowerScheme {
     try {
@@ -945,7 +974,7 @@ function Save-NoxoraSystemState {
     $json | Set-Content -LiteralPath $timestampFile -Encoding UTF8
     $json | Set-Content -LiteralPath $script:LatestState -Encoding UTF8
 
-    Write-NoxoraLog "Rollback state saved: $timestampFile" "SUCCESS"
+    Write-NoxoraLog "Đã lưu trạng thái hoàn tác: $timestampFile" "SUCCESS"
     return $state
 }
 
@@ -955,11 +984,11 @@ function New-NoxoraRestorePoint {
             -Description ("Noxora Safe Tune {0}" -f (Get-Date -Format "yyyy-MM-dd HH:mm")) `
             -RestorePointType "MODIFY_SETTINGS" `
             -ErrorAction Stop
-        Write-NoxoraLog "Windows restore point created." "SUCCESS"
+        Write-NoxoraLog "Đã tạo điểm khôi phục Windows." "SUCCESS"
         return $true
     } catch {
         Write-NoxoraLog (
-            "Restore point was not created. System Protection may be disabled: " +
+            "Không thể tạo điểm khôi phục. System Protection có thể đang bị tắt: " +
             $_.Exception.Message
         ) "WARN"
         return $false
@@ -998,14 +1027,14 @@ function Set-NoxoraActivePowerScheme {
 
     $output = & powercfg.exe /setactive $Scheme 2>&1
     if ($LASTEXITCODE -ne 0) {
-        throw ("powercfg failed: " + (($output | Out-String).Trim()))
+        throw ("Lệnh powercfg thất bại: " + (($output | Out-String).Trim()))
     }
 
     return $true
 }
 
 # ------------------------------------------------------------------------------
-# Safe optimization profiles
+# Các cấu hình tối ưu an toàn
 # ------------------------------------------------------------------------------
 function Remove-NoxoraOldTempFiles {
     param(
@@ -1075,7 +1104,7 @@ function Invoke-NoxoraSafeOptimize {
         $dnsFlushed = ($LASTEXITCODE -eq 0)
         if (-not $dnsFlushed) {
             Write-NoxoraLog (
-                "DNS flush failed: " + (($dnsOutput | Out-String).Trim())
+                "Xóa bộ nhớ đệm DNS thất bại: " + (($dnsOutput | Out-String).Trim())
             ) "WARN"
         }
     } catch {
@@ -1086,7 +1115,7 @@ function Invoke-NoxoraSafeOptimize {
     try {
         $powerChanged = Set-NoxoraActivePowerScheme -Scheme "SCHEME_MIN"
     } catch {
-        Write-NoxoraLog "High Performance power plan is unavailable: $($_.Exception.Message)" "WARN"
+        Write-NoxoraLog "Không thể sử dụng chế độ nguồn Hiệu năng cao: $($_.Exception.Message)" "WARN"
     }
 
     [pscustomobject]@{
@@ -1127,13 +1156,13 @@ function Invoke-NoxoraGameProfile {
     try {
         $powerChanged = Set-NoxoraActivePowerScheme -Scheme "SCHEME_MIN"
     } catch {
-        Write-NoxoraLog "High Performance power plan is unavailable: $($_.Exception.Message)" "WARN"
+        Write-NoxoraLog "Không thể sử dụng chế độ nguồn Hiệu năng cao: $($_.Exception.Message)" "WARN"
     }
 
     [pscustomobject]@{
         RestorePointCreated = $restorePoint
-        WindowsGameMode     = "Enabled"
-        GameDvrCapture      = "Disabled"
+        WindowsGameMode     = "Đã bật"
+        GameDvrCapture      = "Đã tắt"
         PowerPlanChanged    = $powerChanged
         RestartRequired     = $false
     }
@@ -1141,7 +1170,7 @@ function Invoke-NoxoraGameProfile {
 
 function Restore-NoxoraSystemState {
     if (-not (Test-Path -LiteralPath $script:LatestState)) {
-        throw "No rollback state was found."
+        throw "Không tìm thấy trạng thái hoàn tác đã lưu."
     }
 
     $state = Get-Content -LiteralPath $script:LatestState -Raw | ConvertFrom-Json
@@ -1168,7 +1197,7 @@ function Restore-NoxoraSystemState {
             $powerRestored = Set-NoxoraActivePowerScheme `
                 -Scheme ([string]$state.ActivePowerScheme)
         } catch {
-            Write-NoxoraLog "Power-plan rollback failed: $($_.Exception.Message)" "WARN"
+            Write-NoxoraLog "Hoàn tác chế độ nguồn thất bại: $($_.Exception.Message)" "WARN"
         }
     }
 
@@ -1181,60 +1210,60 @@ function Restore-NoxoraSystemState {
 }
 
 # ------------------------------------------------------------------------------
-# Reporting and text formatters
+# Báo cáo và định dạng văn bản
 # ------------------------------------------------------------------------------
 function Format-NoxoraInventory {
     param($Inventory)
 
     $gpuText = if ($Inventory.Graphics.Count -gt 0) {
         ($Inventory.Graphics | ForEach-Object {
-            "{0} | Driver {1}" -f $_.Name, $_.DriverVersion
+            "{0} | Trình điều khiển {1}" -f $_.Name, $_.DriverVersion
         }) -join "`r`n"
     } else {
-        "Not detected"
+        "Không phát hiện"
     }
 
     $diskText = if ($Inventory.LogicalDisks.Count -gt 0) {
         ($Inventory.LogicalDisks | ForEach-Object {
-            "{0} {1} GB free / {2} GB ({3}%)" -f
+            "{0} còn trống {1} GB / {2} GB ({3}%)" -f
                 $_.DeviceID, $_.FreeGB, $_.SizeGB, $_.FreePercent
         }) -join "`r`n"
     } else {
-        "Not detected"
+        "Không phát hiện"
     }
 
     $temperatureText = if ($Inventory.ThermalZoneCelsius.Count -gt 0) {
-        ($Inventory.ThermalZoneCelsius -join ", ") + " C"
+        ($Inventory.ThermalZoneCelsius -join ", ") + " °C"
     } else {
-        "Sensor not exposed by firmware"
+        "Firmware không cung cấp dữ liệu cảm biến"
     }
 
     return @"
-SYSTEM OVERVIEW
+TỔNG QUAN HỆ THỐNG
 
-Machine:
+Máy tính:
 $($Inventory.Computer.Manufacturer) $($Inventory.Computer.Model)
 
-Operating system:
+Hệ điều hành:
 $($Inventory.OperatingSystem.Caption)
-Build $($Inventory.OperatingSystem.BuildNumber) | $($Inventory.OperatingSystem.Architecture)
+Bản dựng $($Inventory.OperatingSystem.BuildNumber) | $($Inventory.OperatingSystem.Architecture)
 
-Processor:
+Bộ xử lý:
 $($Inventory.Processor.Name)
-$($Inventory.Processor.Cores) cores / $($Inventory.Processor.LogicalProcessors) logical
-Current $($Inventory.Processor.CurrentClockMHz) MHz | Load $($Inventory.Processor.LoadPercent)%
+$($Inventory.Processor.Cores) nhân / $($Inventory.Processor.LogicalProcessors) luồng xử lý
+Xung hiện tại $($Inventory.Processor.CurrentClockMHz) MHz | Mức tải $($Inventory.Processor.LoadPercent)%
 
-Memory:
-$($Inventory.Computer.TotalRAMGB) GB installed
-$($Inventory.OperatingSystem.FreeRAMGB) GB currently free
+Bộ nhớ:
+Đã lắp $($Inventory.Computer.TotalRAMGB) GB RAM
+Hiện còn trống $($Inventory.OperatingSystem.FreeRAMGB) GB
 
-Graphics:
+Đồ họa:
 $gpuText
 
-Storage:
+Lưu trữ:
 $diskText
 
-Thermal:
+Nhiệt độ:
 $temperatureText
 "@
 }
@@ -1257,10 +1286,10 @@ function Export-NoxoraReport {
         Set-Content -LiteralPath $jsonPath -Encoding UTF8
 
     $textLines = New-Object System.Collections.Generic.List[string]
-    $textLines.Add("NOXORA OPTIMIZER REPORT")
-    $textLines.Add(("Generated: {0}" -f (Get-Date)))
-    $textLines.Add(("Computer: {0}" -f $env:COMPUTERNAME))
-    $textLines.Add(("Windows user: {0}" -f [Environment]::UserName))
+    $textLines.Add("BÁO CÁO NOXORA OPTIMIZER")
+    $textLines.Add(("Thời gian tạo: {0}" -f (Get-Date)))
+    $textLines.Add(("Máy tính: {0}" -f $env:COMPUTERNAME))
+    $textLines.Add(("Tài khoản Windows: {0}" -f [Environment]::UserName))
     $textLines.Add("")
     $textLines.Add(($script:LastReport | ConvertTo-Json -Depth 8))
     $textLines | Set-Content -LiteralPath $textPath -Encoding UTF8
@@ -1273,12 +1302,12 @@ function Export-NoxoraReport {
 }
 
 # ------------------------------------------------------------------------------
-# Main dashboard
+# Bảng điều khiển chính
 # ------------------------------------------------------------------------------
 $xamlMain = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Noxora Optimizer"
+        Title="Noxora Optimizer - Tối ưu hệ thống"
         Height="760"
         Width="1080"
         MinHeight="680"
@@ -1315,7 +1344,7 @@ $xamlMain = @"
             </Grid.RowDefinitions>
 
             <Grid Grid.Row="0" Name="DragArea" Background="#181825">
-                <TextBlock Text="NOXORA SYSTEM OPTIMIZER 2.0 SAFE"
+                <TextBlock Text="NOXORA - TỐI ƯU HỆ THỐNG 2.0 AN TOÀN"
                            Foreground="#f38ba8"
                            VerticalAlignment="Center"
                            Margin="24,0,0,0"
@@ -1361,7 +1390,7 @@ $xamlMain = @"
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         <TextBlock Grid.Row="0"
-                                   Text="LIVE SYSTEM SUMMARY"
+                                   Text="TỔNG QUAN HỆ THỐNG"
                                    Foreground="#89b4fa"
                                    FontWeight="Black"
                                    FontSize="12"
@@ -1377,50 +1406,50 @@ $xamlMain = @"
                                  FontFamily="Consolas"
                                  FontSize="12"
                                  Padding="15,4,15,15"
-                                 Text="Select SYSTEM SCAN to collect machine information."/>
+                                 Text="Chọn QUÉT HỆ THỐNG để thu thập thông tin máy."/>
                     </Grid>
                 </Border>
 
                 <UniformGrid Grid.Column="1" Columns="3" Rows="4">
                     <Button Name="BtnScan"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="SYSTEM SCAN"/>
+                            Content="QUÉT HỆ THỐNG"/>
                     <Button Name="BtnHardware"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="HARDWARE INVENTORY"/>
+                            Content="THÔNG TIN PHẦN CỨNG"/>
                     <Button Name="BtnProcesses"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="PROCESS AUDIT"/>
+                            Content="KIỂM TRA TIẾN TRÌNH"/>
 
                     <Button Name="BtnStartup"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="STARTUP AUDIT"/>
+                            Content="KIỂM TRA KHỞI ĐỘNG"/>
                     <Button Name="BtnServices"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="SERVICE AUDIT"/>
+                            Content="KIỂM TRA DỊCH VỤ"/>
                     <Button Name="BtnNetwork"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="NETWORK DIAGNOSTICS"/>
+                            Content="CHẨN ĐOÁN MẠNG"/>
 
                     <Button Name="BtnSecurity"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="SECURITY STATUS"/>
+                            Content="TRẠNG THÁI BẢO MẬT"/>
                     <Button Name="BtnOptimize"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="SAFE OPTIMIZE"/>
+                            Content="TỐI ƯU AN TOÀN"/>
                     <Button Name="BtnGameMode"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="REVERSIBLE GAME PROFILE"/>
+                            Content="CẤU HÌNH CHƠI GAME"/>
 
                     <Button Name="BtnRollback"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="ROLLBACK LAST TUNE"/>
+                            Content="HOÀN TÁC TỐI ƯU"/>
                     <Button Name="BtnExport"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="EXPORT REPORT"/>
+                            Content="XUẤT BÁO CÁO"/>
                     <Button Name="BtnOpenLogs"
                             Style="{StaticResource NoxoraCardButton}"
-                            Content="OPEN LOG FOLDER"/>
+                            Content="MỞ THƯ MỤC NHẬT KÝ"/>
                 </UniformGrid>
             </Grid>
 
@@ -1434,7 +1463,7 @@ $xamlMain = @"
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
                     <TextBlock Grid.Row="0"
-                               Text="AUDIT CONSOLE"
+                               Text="BẢNG NHẬT KÝ KIỂM TRA"
                                Foreground="#a6e3a1"
                                FontWeight="Black"
                                FontSize="12"
@@ -1450,17 +1479,17 @@ $xamlMain = @"
                              VerticalScrollBarVisibility="Auto"
                              FontFamily="Consolas"
                              FontSize="12"
-                             Text="[SYSTEM] Authentication complete. Safe administration mode active.&#x0a;"/>
+                             Text="[HỆ THỐNG] Xác thực thành công. Chế độ quản trị an toàn đã sẵn sàng.&#x0a;"/>
                 </Grid>
             </Border>
 
             <Grid Grid.Row="3" Background="#181825">
-                <TextBlock Text="No automatic process killing | No security bypass | No remote payloads"
+                <TextBlock Text="Không tự dừng tiến trình | Không vượt bảo mật | Không chạy mã từ xa"
                            Foreground="#6c7086"
                            FontSize="10"
                            VerticalAlignment="Center"
                            Margin="16,0,0,0"/>
-                <TextBlock Text="LOCAL ADMIN SESSION"
+                <TextBlock Text="PHIÊN QUẢN TRỊ CỤC BỘ"
                            Foreground="#a6adc8"
                            FontSize="10"
                            VerticalAlignment="Center"
@@ -1509,7 +1538,7 @@ $btnClose.Add_Click({
 })
 
 $btnHardware.Add_Click({
-    Invoke-NoxoraAction -Title "Collecting hardware inventory" -Action {
+    Invoke-NoxoraAction -Title "Đang thu thập thông tin phần cứng" -Action {
         $inventory = Get-NoxoraSystemInventory
         $script:LastReport.Hardware = $inventory
         return $inventory
@@ -1520,7 +1549,7 @@ $btnHardware.Add_Click({
 })
 
 $btnProcesses.Add_Click({
-    Invoke-NoxoraAction -Title "Auditing active processes" -Action {
+    Invoke-NoxoraAction -Title "Đang kiểm tra các tiến trình hoạt động" -Action {
         $result = Get-NoxoraProcessAudit
         $script:LastReport.ProcessAudit = $result
         return $result
@@ -1528,20 +1557,26 @@ $btnProcesses.Add_Click({
         param($result)
 
         $display = $result |
-            Select-Object -First 15 PID, Name, CPU, RAMMB, Threads, Signature |
+            Select-Object -First 15 `
+                @{Name="PID"; Expression={$_.PID}}, `
+                @{Name="Tiến trình"; Expression={$_.Name}}, `
+                @{Name="CPU (%)"; Expression={$_.CPU}}, `
+                @{Name="RAM (MB)"; Expression={$_.RAMMB}}, `
+                @{Name="Luồng"; Expression={$_.Threads}}, `
+                @{Name="Chữ ký số"; Expression={ConvertTo-NoxoraSignatureStatus $_.Signature}} |
             Format-Table -AutoSize |
             Out-String -Width 120
 
         Set-NoxoraSummary (
-            "TOP ACTIVE PROCESSES`r`n`r`n" +
+            "CÁC TIẾN TRÌNH HOẠT ĐỘNG CAO`r`n`r`n" +
             $display +
-            "`r`nNoxora only reports suspicious indicators. It does not kill processes automatically."
+            "`r`nNoxora chỉ báo cáo các dấu hiệu cần chú ý và không tự động dừng tiến trình."
         )
     }
 })
 
 $btnStartup.Add_Click({
-    Invoke-NoxoraAction -Title "Auditing startup locations" -Action {
+    Invoke-NoxoraAction -Title "Đang kiểm tra các vị trí tự khởi động" -Action {
         $result = Get-NoxoraStartupAudit
         $script:LastReport.StartupAudit = $result
         return $result
@@ -1549,25 +1584,37 @@ $btnStartup.Add_Click({
         param($result)
 
         $registryText = $result.RegistryEntries |
-            Select-Object Scope, Name, Command |
+            Select-Object `
+                @{Name="Phạm vi"; Expression={
+                    switch ($_.Scope) {
+                        "CurrentUser"      { "Người dùng hiện tại" }
+                        "CurrentUserOnce"  { "Người dùng hiện tại - một lần" }
+                        "LocalMachine"     { "Toàn máy" }
+                        "LocalMachineOnce" { "Toàn máy - một lần" }
+                        "LocalMachine32"   { "Toàn máy - ứng dụng 32-bit" }
+                        default             { $_.Scope }
+                    }
+                }}, `
+                @{Name="Tên"; Expression={$_.Name}}, `
+                @{Name="Lệnh"; Expression={$_.Command}} |
             Format-Table -Wrap |
             Out-String -Width 120
 
         Set-NoxoraSummary @"
-STARTUP AUDIT
+KIỂM TRA KHỞI ĐỘNG
 
-Registry entries: $($result.RegistryEntries.Count)
-Startup folder files: $($result.StartupFiles.Count)
-Third-party scheduled tasks: $($result.ScheduledTasks.Count)
+Mục Registry tự khởi động: $($result.RegistryEntries.Count)
+Tệp trong thư mục Startup: $($result.StartupFiles.Count)
+Tác vụ lập lịch bên thứ ba: $($result.ScheduledTasks.Count)
 
-REGISTRY STARTUP
+REGISTRY TỰ KHỞI ĐỘNG
 $registryText
 "@
     }
 })
 
 $btnServices.Add_Click({
-    Invoke-NoxoraAction -Title "Auditing Windows services" -Action {
+    Invoke-NoxoraAction -Title "Đang kiểm tra dịch vụ Windows" -Action {
         $result = Get-NoxoraServiceAudit
         $script:LastReport.ServiceAudit = $result
         return $result
@@ -1575,28 +1622,31 @@ $btnServices.Add_Click({
         param($result)
 
         $stoppedText = $result.AutomaticButStopped |
-            Select-Object -First 20 Name, DisplayName, StartName |
+            Select-Object -First 20 `
+                @{Name="Tên dịch vụ"; Expression={$_.Name}}, `
+                @{Name="Tên hiển thị"; Expression={$_.DisplayName}}, `
+                @{Name="Tài khoản chạy"; Expression={$_.StartName}} |
             Format-Table -Wrap |
             Out-String -Width 120
 
         Set-NoxoraSummary @"
-SERVICE AUDIT
+KIỂM TRA DỊCH VỤ
 
-Total services: $($result.TotalServices)
-Running services: $($result.RunningServices)
-Automatic but stopped: $($result.AutomaticButStopped.Count)
-Third-party automatic services: $($result.ThirdPartyAutomatic.Count)
+Tổng số dịch vụ: $($result.TotalServices)
+Dịch vụ đang chạy: $($result.RunningServices)
+Tự động nhưng đang dừng: $($result.AutomaticButStopped.Count)
+Dịch vụ tự động của bên thứ ba: $($result.ThirdPartyAutomatic.Count)
 
-AUTOMATIC BUT STOPPED
+DỊCH VỤ TỰ ĐỘNG NHƯNG ĐANG DỪNG
 $stoppedText
 
-Review before changing any service. Noxora does not disable services automatically.
+Hãy kiểm tra kỹ trước khi thay đổi dịch vụ. Noxora không tự động tắt dịch vụ.
 "@
     }
 })
 
 $btnNetwork.Add_Click({
-    Invoke-NoxoraAction -Title "Running network diagnostics" -Action {
+    Invoke-NoxoraAction -Title "Đang chẩn đoán mạng" -Action {
         $result = Get-NoxoraNetworkAudit
         $script:LastReport.NetworkAudit = $result
         return $result
@@ -1604,25 +1654,37 @@ $btnNetwork.Add_Click({
         param($result)
 
         $adapterText = $result.Adapters |
-            Format-Table Name, Status, LinkSpeed, MacAddress -AutoSize |
+            Select-Object `
+                @{Name="Tên bộ điều hợp"; Expression={$_.Name}}, `
+                @{Name="Trạng thái"; Expression={
+                    switch ($_.Status) {
+                        "Up"           { "Đang hoạt động" }
+                        "Disconnected" { "Đã ngắt kết nối" }
+                        "Disabled"     { "Đã tắt" }
+                        default         { $_.Status }
+                    }
+                }}, `
+                @{Name="Tốc độ liên kết"; Expression={$_.LinkSpeed}}, `
+                @{Name="Địa chỉ MAC"; Expression={$_.MacAddress}} |
+            Format-Table -AutoSize |
             Out-String -Width 120
 
         Set-NoxoraSummary @"
-NETWORK DIAGNOSTICS
+CHẨN ĐOÁN MẠNG
 
-Default gateway: $($result.DefaultGateway)
-Gateway reachable: $($result.GatewayReachable)
-DNS resolution: $($result.DnsResolution)
-Established TCP connections: $($result.EstablishedConnections)
+Cổng mạng mặc định: $($result.DefaultGateway)
+Có thể kết nối tới cổng mạng: $(ConvertTo-NoxoraYesNo $result.GatewayReachable)
+Phân giải DNS hoạt động: $(ConvertTo-NoxoraYesNo $result.DnsResolution)
+Kết nối TCP đang thiết lập: $($result.EstablishedConnections)
 
-ADAPTERS
+BỘ ĐIỀU HỢP MẠNG
 $adapterText
 "@
     }
 })
 
 $btnSecurity.Add_Click({
-    Invoke-NoxoraAction -Title "Checking Windows security status" -Action {
+    Invoke-NoxoraAction -Title "Đang kiểm tra trạng thái bảo mật Windows" -Action {
         $result = Get-NoxoraSecurityAudit
         $script:LastReport.SecurityAudit = $result
         return $result
@@ -1630,25 +1692,44 @@ $btnSecurity.Add_Click({
         param($result)
 
         $firewallText = $result.Firewall |
-            Format-Table Name, Enabled, DefaultInboundAction, DefaultOutboundAction |
+            Select-Object `
+                @{Name="Hồ sơ"; Expression={$_.Name}}, `
+                @{Name="Đang bật"; Expression={ConvertTo-NoxoraYesNo $_.Enabled}}, `
+                @{Name="Luồng vào mặc định"; Expression={$_.DefaultInboundAction}}, `
+                @{Name="Luồng ra mặc định"; Expression={$_.DefaultOutboundAction}} |
+            Format-Table -AutoSize |
             Out-String -Width 120
 
         $defenderText = if ($null -ne $result.Defender) {
-            $result.Defender | Format-List | Out-String
+            if ($result.Defender.PSObject.Properties.Name -contains "Error") {
+                "Không thể đọc trạng thái Microsoft Defender: $($result.Defender.Error)"
+            }
+            else {
+@"
+Chống virus: $(ConvertTo-NoxoraYesNo $result.Defender.AntivirusEnabled)
+Chống phần mềm gián điệp: $(ConvertTo-NoxoraYesNo $result.Defender.AntispywareEnabled)
+Bảo vệ thời gian thực: $(ConvertTo-NoxoraYesNo $result.Defender.RealTimeProtectionEnabled)
+Giám sát hành vi: $(ConvertTo-NoxoraYesNo $result.Defender.BehaviorMonitorEnabled)
+Bảo vệ tệp tải xuống: $(ConvertTo-NoxoraYesNo $result.Defender.IoavProtectionEnabled)
+Bảo vệ mạng: $(ConvertTo-NoxoraYesNo $result.Defender.NISEnabled)
+Lần quét nhanh gần nhất: $($result.Defender.LastQuickScan)
+Tuổi cơ sở dữ liệu nhận diện: $($result.Defender.SignatureAgeDays) ngày
+"@
+            }
         } else {
-            "Microsoft Defender status is unavailable."
+            "Không thể đọc trạng thái Microsoft Defender."
         }
 
         Set-NoxoraSummary @"
-SECURITY STATUS
+TRẠNG THÁI BẢO MẬT
 
-UAC enabled: $($result.UACEnabled)
-Secure Boot: $($result.SecureBoot)
+UAC đang bật: $(ConvertTo-NoxoraYesNo $result.UACEnabled)
+Secure Boot đang bật: $(ConvertTo-NoxoraYesNo $result.SecureBoot)
 
-FIREWALL
+TƯỜNG LỬA
 $firewallText
 
-DEFENDER
+MICROSOFT DEFENDER
 $defenderText
 "@
     }
@@ -1656,8 +1737,8 @@ $defenderText
 
 $btnOptimize.Add_Click({
     $answer = [System.Windows.Forms.MessageBox]::Show(
-        "Safe Optimize will create a rollback snapshot, attempt a restore point, remove old temporary files, flush DNS, and select High Performance power mode. Continue?",
-        "Noxora Safe Optimize",
+        "Tối ưu an toàn sẽ lưu trạng thái hoàn tác, thử tạo điểm khôi phục, xóa tệp tạm cũ, làm mới bộ nhớ đệm DNS và chọn chế độ nguồn Hiệu năng cao. Bạn có muốn tiếp tục không?",
+        "Tối ưu an toàn Noxora",
         "YesNo",
         "Question"
     )
@@ -1666,20 +1747,29 @@ $btnOptimize.Add_Click({
         return
     }
 
-    Invoke-NoxoraAction -Title "Applying safe optimization profile" -Action {
+    Invoke-NoxoraAction -Title "Đang áp dụng cấu hình tối ưu an toàn" -Action {
         $result = Invoke-NoxoraSafeOptimize
         $script:LastReport.SafeOptimize = $result
         return $result
     } -OnSuccess {
         param($result)
-        Set-NoxoraSummary ($result | Format-List | Out-String)
+        Set-NoxoraSummary @"
+KẾT QUẢ TỐI ƯU AN TOÀN
+
+Đã tạo điểm khôi phục: $(ConvertTo-NoxoraYesNo $result.RestorePointCreated)
+Số tệp tạm đã xóa: $($result.TempFilesRemoved)
+Dung lượng đã giải phóng: $($result.TempSpaceFreedMB) MB
+Đã làm mới bộ nhớ đệm DNS: $(ConvertTo-NoxoraYesNo $result.DnsCacheFlushed)
+Đã chọn chế độ nguồn Hiệu năng cao: $(ConvertTo-NoxoraYesNo $result.HighPerformancePlan)
+Cần khởi động lại: $(ConvertTo-NoxoraYesNo $result.RestartRequired)
+"@
     }
 })
 
 $btnGameMode.Add_Click({
     $answer = [System.Windows.Forms.MessageBox]::Show(
-        "The reversible game profile enables Windows Game Mode, disables Game DVR capture, and selects High Performance power mode. Continue?",
-        "Noxora Game Profile",
+        "Cấu hình chơi game có thể hoàn tác sẽ bật Windows Game Mode, tắt ghi hình Game DVR và chọn chế độ nguồn Hiệu năng cao. Bạn có muốn tiếp tục không?",
+        "Cấu hình chơi game Noxora",
         "YesNo",
         "Question"
     )
@@ -1688,20 +1778,28 @@ $btnGameMode.Add_Click({
         return
     }
 
-    Invoke-NoxoraAction -Title "Applying reversible game profile" -Action {
+    Invoke-NoxoraAction -Title "Đang áp dụng cấu hình chơi game có thể hoàn tác" -Action {
         $result = Invoke-NoxoraGameProfile
         $script:LastReport.GameProfile = $result
         return $result
     } -OnSuccess {
         param($result)
-        Set-NoxoraSummary ($result | Format-List | Out-String)
+        Set-NoxoraSummary @"
+KẾT QUẢ CẤU HÌNH CHƠI GAME
+
+Đã tạo điểm khôi phục: $(ConvertTo-NoxoraYesNo $result.RestorePointCreated)
+Windows Game Mode: $($result.WindowsGameMode)
+Ghi hình Game DVR: $($result.GameDvrCapture)
+Đã đổi chế độ nguồn: $(ConvertTo-NoxoraYesNo $result.PowerPlanChanged)
+Cần khởi động lại: $(ConvertTo-NoxoraYesNo $result.RestartRequired)
+"@
     }
 })
 
 $btnRollback.Add_Click({
     $answer = [System.Windows.Forms.MessageBox]::Show(
-        "Restore the registry and power-plan values saved before the most recent tune?",
-        "Noxora Rollback",
+        "Khôi phục các giá trị Registry và chế độ nguồn đã lưu trước lần tối ưu gần nhất?",
+        "Hoàn tác Noxora",
         "YesNo",
         "Question"
     )
@@ -1710,18 +1808,25 @@ $btnRollback.Add_Click({
         return
     }
 
-    Invoke-NoxoraAction -Title "Restoring previous system state" -Action {
+    Invoke-NoxoraAction -Title "Đang khôi phục trạng thái hệ thống trước đó" -Action {
         $result = Restore-NoxoraSystemState
         $script:LastReport.Rollback = $result
         return $result
     } -OnSuccess {
         param($result)
-        Set-NoxoraSummary ($result | Format-List | Out-String)
+        Set-NoxoraSummary @"
+KẾT QUẢ HOÀN TÁC
+
+Khôi phục từ trạng thái lưu lúc: $($result.RestoredFrom)
+Đã khôi phục Registry: $(ConvertTo-NoxoraYesNo $result.RegistryRestored)
+Đã khôi phục chế độ nguồn: $(ConvertTo-NoxoraYesNo $result.PowerPlanRestored)
+Cần khởi động lại: $(ConvertTo-NoxoraYesNo $result.RestartRequired)
+"@
     }
 })
 
 $btnExport.Add_Click({
-    Invoke-NoxoraAction -Title "Exporting local audit report" -Action {
+    Invoke-NoxoraAction -Title "Đang xuất báo cáo kiểm tra cục bộ" -Action {
         if (-not $script:LastReport.Contains("Hardware")) {
             $script:LastReport.Hardware = Get-NoxoraSystemInventory
         }
@@ -1729,12 +1834,12 @@ $btnExport.Add_Click({
     } -OnSuccess {
         param($result)
         Set-NoxoraSummary @"
-REPORT EXPORTED
+ĐÃ XUẤT BÁO CÁO
 
-JSON:
+Tệp JSON:
 $($result.JsonFile)
 
-TEXT:
+Tệp văn bản:
 $($result.TextFile)
 "@
         Start-Process -FilePath "explorer.exe" -ArgumentList "`"$($result.Folder)`""
@@ -1746,7 +1851,7 @@ $btnOpenLogs.Add_Click({
 })
 
 $btnScan.Add_Click({
-    Invoke-NoxoraAction -Title "Running combined system scan" -Action {
+    Invoke-NoxoraAction -Title "Đang quét tổng hợp hệ thống" -Action {
         $inventory = Get-NoxoraSystemInventory
         Invoke-NoxoraUiPump
 
@@ -1774,23 +1879,23 @@ $btnScan.Add_Click({
 
         Set-NoxoraSummary (
             (Format-NoxoraInventory $result.Inventory) +
-            "`r`n`r`nQUICK HEALTH FLAGS`r`n" +
-            "Gateway reachable: $($result.Network.GatewayReachable)`r`n" +
-            "DNS resolution: $($result.Network.DnsResolution)`r`n" +
-            "UAC enabled: $($result.Security.UACEnabled)`r`n" +
-            "Firewall profiles checked: $($result.Security.Firewall.Count)`r`n" +
-            "High-activity processes sampled: $($result.Processes.Count)"
+            "`r`n`r`nCHỈ BÁO SỨC KHỎE NHANH`r`n" +
+            "Có thể kết nối tới cổng mạng: $(ConvertTo-NoxoraYesNo $result.Network.GatewayReachable)`r`n" +
+            "Phân giải DNS hoạt động: $(ConvertTo-NoxoraYesNo $result.Network.DnsResolution)`r`n" +
+            "UAC đang bật: $(ConvertTo-NoxoraYesNo $result.Security.UACEnabled)`r`n" +
+            "Số hồ sơ tường lửa đã kiểm tra: $($result.Security.Firewall.Count)`r`n" +
+            "Số tiến trình hoạt động cao đã lấy mẫu: $($result.Processes.Count)"
         )
     }
 })
 
 $script:windowMain.Add_Closed({
-    Write-NoxoraLog "Noxora session closed." "INFO"
+    Write-NoxoraLog "Đã đóng phiên làm việc Noxora." "INFO"
     try {
         $script:Mutex.ReleaseMutex()
         $script:Mutex.Dispose()
     } catch {}
 })
 
-Write-NoxoraLog "Noxora dashboard initialized." "SUCCESS"
+Write-NoxoraLog "Bảng điều khiển Noxora đã sẵn sàng." "SUCCESS"
 $script:windowMain.ShowDialog() | Out-Null
